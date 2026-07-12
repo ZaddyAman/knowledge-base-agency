@@ -1,0 +1,92 @@
+﻿{
+    "name":  "PostHog public handbook - demo snapshot",
+    "sourceRepository":  "https://github.com/PostHog/posthog.com",
+    "sourceVersion":  "61f1bb241d1289b85a5fc30fcd3cc45c05e44aec",
+    "license":  "MIT for /contents; see SOURCE-LICENSE.txt",
+    "sources":  [
+                    {
+                        "path":  "people/spending-money.md",
+                        "sourceUrl":  "https://raw.githubusercontent.com/PostHog/posthog.com/61f1bb241d1289b85a5fc30fcd3cc45c05e44aec/contents/handbook/people/spending-money.md",
+                        "sourceVersion":  "61f1bb241d1289b85a5fc30fcd3cc45c05e44aec",
+                        "sha256":  "667294e2c3320ca31ea687862ff4e2a4bef2a838ad389c5bb6bb7854eecb9a14",
+                        "bytes":  21465
+                    },
+                    {
+                        "path":  "people/benefits.md",
+                        "sourceUrl":  "https://raw.githubusercontent.com/PostHog/posthog.com/61f1bb241d1289b85a5fc30fcd3cc45c05e44aec/contents/handbook/people/benefits.md",
+                        "sourceVersion":  "61f1bb241d1289b85a5fc30fcd3cc45c05e44aec",
+                        "sha256":  "e2e679ca67089b54688e5b3056c70acbb595dda0c4a87eebee0d25aab21acf27",
+                        "bytes":  7140
+                    },
+                    {
+                        "path":  "people/time-off.md",
+                        "sourceUrl":  "https://raw.githubusercontent.com/PostHog/posthog.com/61f1bb241d1289b85a5fc30fcd3cc45c05e44aec/contents/handbook/people/time-off.md",
+                        "sourceVersion":  "61f1bb241d1289b85a5fc30fcd3cc45c05e44aec",
+                        "sha256":  "3a0bd67b477e9bf8958a1cf95e35be1c8a04758afbde9be52d8215fde500df67",
+                        "bytes":  10782
+                    },
+                    {
+                        "path":  "people/onboarding.md",
+                        "sourceUrl":  "https://raw.githubusercontent.com/PostHog/posthog.com/61f1bb241d1289b85a5fc30fcd3cc45c05e44aec/contents/handbook/people/onboarding.md",
+                        "sourceVersion":  "61f1bb241d1289b85a5fc30fcd3cc45c05e44aec",
+                        "sha256":  "48cc35285ba908d9600a44d02795a4e6240f7df8df03bdb06149bbd996ecdb8a",
+                        "bytes":  24806
+                    },
+                    {
+                        "path":  "people/side-gigs.md",
+                        "sourceUrl":  "https://raw.githubusercontent.com/PostHog/posthog.com/61f1bb241d1289b85a5fc30fcd3cc45c05e44aec/contents/handbook/people/side-gigs.md",
+                        "sourceVersion":  "61f1bb241d1289b85a5fc30fcd3cc45c05e44aec",
+                        "sha256":  "265faca2c519f4ba5ee1ed4cdf414576778e49811f15cb176f0c45e91a1c766f",
+                        "bytes":  3714
+                    },
+                    {
+                        "path":  "company/communication.md",
+                        "sourceUrl":  "https://raw.githubusercontent.com/PostHog/posthog.com/61f1bb241d1289b85a5fc30fcd3cc45c05e44aec/contents/handbook/company/communication.md",
+                        "sourceVersion":  "61f1bb241d1289b85a5fc30fcd3cc45c05e44aec",
+                        "sha256":  "6b2956cde7b18e4361f81c60175b54cedd196f22d34263f11e73be9662611ddc",
+                        "bytes":  31514
+                    },
+                    {
+                        "path":  "getting-started/meetings.md",
+                        "sourceUrl":  "https://raw.githubusercontent.com/PostHog/posthog.com/61f1bb241d1289b85a5fc30fcd3cc45c05e44aec/contents/handbook/getting-started/meetings.md",
+                        "sourceVersion":  "61f1bb241d1289b85a5fc30fcd3cc45c05e44aec",
+                        "sha256":  "cba768fe0e5d574e38b936bb93fcca8f857bbbe361669422f79e76ee05693777",
+                        "bytes":  5854
+                    },
+                    {
+                        "path":  "company/offsites.md",
+                        "sourceUrl":  "https://raw.githubusercontent.com/PostHog/posthog.com/61f1bb241d1289b85a5fc30fcd3cc45c05e44aec/contents/handbook/company/offsites.md",
+                        "sourceVersion":  "61f1bb241d1289b85a5fc30fcd3cc45c05e44aec",
+                        "sha256":  "20b3a1e56847d170fbd90dc6dcb6c7cb038ade42286737770fc1c5cdd3c6bbe7",
+                        "bytes":  26139
+                    },
+                    {
+                        "path":  "company/security.md",
+                        "sourceUrl":  "https://raw.githubusercontent.com/PostHog/posthog.com/61f1bb241d1289b85a5fc30fcd3cc45c05e44aec/contents/handbook/company/security.md",
+                        "sourceVersion":  "61f1bb241d1289b85a5fc30fcd3cc45c05e44aec",
+                        "sha256":  "3314f3e24e46c419fae0601fc25492709948d0aa30498205664619f1d892e405",
+                        "bytes":  9494
+                    },
+                    {
+                        "path":  "support/customer-support.md",
+                        "sourceUrl":  "https://raw.githubusercontent.com/PostHog/posthog.com/61f1bb241d1289b85a5fc30fcd3cc45c05e44aec/contents/handbook/support/customer-support.md",
+                        "sourceVersion":  "61f1bb241d1289b85a5fc30fcd3cc45c05e44aec",
+                        "sha256":  "03ba879a6608eb0b47c7b4640f1e9a28af92be75efa53ccc1cacf3ef744248d8",
+                        "bytes":  16835
+                    },
+                    {
+                        "path":  "support/support-incident-response.md",
+                        "sourceUrl":  "https://raw.githubusercontent.com/PostHog/posthog.com/61f1bb241d1289b85a5fc30fcd3cc45c05e44aec/contents/handbook/support/support-incident-response.md",
+                        "sourceVersion":  "61f1bb241d1289b85a5fc30fcd3cc45c05e44aec",
+                        "sha256":  "efd68929b7e2309599262b932486529db1853ef5c80dabb2aebb199e012cfc00",
+                        "bytes":  15034
+                    },
+                    {
+                        "path":  "people/finance.md",
+                        "sourceUrl":  "https://raw.githubusercontent.com/PostHog/posthog.com/61f1bb241d1289b85a5fc30fcd3cc45c05e44aec/contents/handbook/people/finance.md",
+                        "sourceVersion":  "61f1bb241d1289b85a5fc30fcd3cc45c05e44aec",
+                        "sha256":  "9f972f4fa563db3080d2f6dadb18edbf7597a843f70a8a93db0457c00d4361f3",
+                        "bytes":  3077
+                    }
+                ]
+}
