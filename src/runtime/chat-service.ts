@@ -1,4 +1,4 @@
-import { validateHermesOutput } from "./answer-contract.js";
+import { validateHermesOutput, type RuntimeSource } from "./answer-contract.js";
 import { runHermes } from "./hermes-cli.js";
 import { answerPrompt } from "./prompts.js";
 import { routeQuestion } from "./question-router.js";
@@ -31,7 +31,7 @@ function directResult(kind: "conversation" | "out_of_scope", answer: string, dur
   };
 }
 
-export async function answerQuestion(question: string, report: StageReporter = () => undefined, signal?: AbortSignal) {
+export async function answerQuestion(question: string, report: StageReporter = () => undefined, signal?: AbortSignal, runtimeSources?: RuntimeSource[]) {
   let route = routeQuestion(question);
   let preflightDurationMs = 0;
 
@@ -62,12 +62,17 @@ export async function answerQuestion(question: string, report: StageReporter = (
     return directResult(route.kind, route.answer, preflightDurationMs);
   }
 
+  if (runtimeSources && runtimeSources.length === 0) {
+    const gap = { title: "Workspace has no supporting evidence", missingEvidence: "Upload and ingest a source document that addresses this question." };
+    return { statusCode: 200, body: { answer: { status: "REFUSED_GAP", answer: "I can’t answer this from the current workspace because it has no ready supporting evidence.", claims: [], citations: [], gap }, citations: [], decision: { publishable: true, status: "REFUSED_GAP", reason: null }, run: { durationMs: 0, runtime: "Atlas evidence gate", skipped: true } } };
+  }
+
   try {
     await report({ type: "stage", id: "search", state: "running", label: "Hermes is searching source documents" });
-    const run = await runHermes(answerPrompt(question), ["llm-wiki"], 180_000, undefined, signal);
+    const run = await runHermes(answerPrompt(question, runtimeSources), ["llm-wiki"], 180_000, undefined, signal);
     await report({ type: "stage", id: "search", state: "complete", label: "Source passages resolved" });
     await report({ type: "stage", id: "validate", state: "running", label: "Validating exact citations" });
-    const validated = await validateHermesOutput(run.output);
+    const validated = await validateHermesOutput(run.output, runtimeSources);
     await report({ type: "stage", id: "validate", state: "complete", label: validated.decision.publishable ? "Every claim is supported" : "Answer converted to a safe refusal" });
     return { statusCode: 200, body: { ...validated, run: { durationMs: run.durationMs, runtime: "Hermes + llm-wiki", skipped: false } } };
   } catch (error) {

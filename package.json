@@ -6,6 +6,7 @@
   "scripts": {
     "corpus:fetch": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/fetch-demo-corpus.ps1",
     "dev:api": "tsx src/runtime/server.ts",
+    "dev:convex": "convex dev",
     "dev:web": "vite --host 127.0.0.1 --port 4173",
     "build:web": "vite build",
     "qmd:status": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/qmd.ps1 status",
@@ -23,6 +24,7 @@
     "@radix-ui/react-tooltip": "^1.2.12",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "convex": "^1.42.1",
     "hono": "^4.12.29",
     "lucide-react": "^1.24.0",
     "radix-ui": "^1.6.2",

@@ -6,7 +6,7 @@ import { routeQuestion } from "../src/runtime/question-router.js";
 test("greetings receive an immediate conversational response", () => {
   assert.deepEqual(routeQuestion("Hi"), {
     kind: "conversation",
-    answer: "Hi! Ask me anything about the PostHog team handbook, policies, or operations.",
+    answer: "Hi! Ask me anything about this workspace’s documents, policies, or operations.",
   });
 });
 

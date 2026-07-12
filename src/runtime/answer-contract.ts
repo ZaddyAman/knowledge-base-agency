@@ -27,12 +27,19 @@ type Manifest = {
   sources: Array<{ path: string; sha256: string; sourceUrl: string }>;
 };
 
+export type RuntimeSource = {
+  path: string;
+  hash: string;
+  lines: string[];
+  firstLineNumber: number;
+};
+
 function parseJson(output: string): unknown {
   const fenced = output.match(/```(?:json)?\s*([\s\S]*?)```/i);
   return JSON.parse((fenced?.[1] ?? output).trim());
 }
 
-export async function validateHermesOutput(output: string) {
+export async function validateHermesOutput(output: string, runtimeSources: RuntimeSource[] = []) {
   const root = process.cwd();
   const manifestText = await readFile(
     path.join(root, "data/posthog-demo/manifest.json"),
@@ -44,11 +51,21 @@ export async function validateHermesOutput(output: string) {
     ? { ...parsedAnswer, gap: null }
     : parsedAnswer;
   const sourceByPath = new Map(manifest.sources.map((source) => [source.path, source]));
+  const runtimeSourceByPath = new Map(runtimeSources.map((source) => [source.path, source]));
 
   const citations: AnswerInput["citations"] = answer.citations.map((citation) => {
     const normalizedPath = citation.sourcePath
       .replace(/^qmd:\/\/posthog-demo\/(?:path\/)?/, "")
       .replace(/^posthog-demo\//, "");
+    const runtimeSource = runtimeSourceByPath.get(normalizedPath);
+    if (runtimeSource) return {
+      id: citation.id,
+      sourceId: normalizedPath,
+      sourceHash: runtimeSource.hash,
+      startLine: citation.startLine,
+      endLine: citation.endLine,
+      excerpt: citation.excerpt,
+    };
     const source = sourceByPath.get(normalizedPath);
     if (!source) throw new Error(`Unknown citation source: ${citation.sourcePath}`);
     return {
@@ -63,6 +80,14 @@ export async function validateHermesOutput(output: string) {
 
   const citedPaths = [...new Set(citations.map((citation) => citation.sourceId))];
   const sources: SourceVersion[] = await Promise.all(citedPaths.map(async (sourcePath) => {
+    const runtimeSource = runtimeSourceByPath.get(sourcePath);
+    if (runtimeSource) return {
+      id: runtimeSource.path,
+      hash: runtimeSource.hash,
+      active: true,
+      lines: runtimeSource.lines,
+      firstLineNumber: runtimeSource.firstLineNumber,
+    };
     const source = sourceByPath.get(sourcePath);
     if (!source) throw new Error(`Unknown source: ${sourcePath}`);
     const body = await readFile(path.join(root, "data/posthog-demo/sources", sourcePath), "utf8");

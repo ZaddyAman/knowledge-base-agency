@@ -8,13 +8,16 @@ Atlas now includes a responsive shadcn/ui conversation surface, a separate anony
 
 ```powershell
 npm install
+npm run dev:convex
 npm run dev:api
 npm run dev:web
 ```
 
-Open `http://127.0.0.1:4173`. The API runs on `http://127.0.0.1:8787` and Vite proxies `/api` during local development.
+Open `http://127.0.0.1:4173`. Convex provides durable workspaces, conversations, messages, storage, ingestion jobs, and source passages. The Atlas/Hermes API runs on `http://127.0.0.1:8787`; Vite proxies `/api` during local development.
 
-Supported demo uploads are `.md` and `.txt`, up to 2 MB each and five files per batch. Anonymous uploads enter a bounded, deduplicated quarantine under the ignored `data/posthog-demo/pending/` directory. They are not retrieval-authoritative until a Knowledge Owner reviews and publishes them.
+Supported demo uploads are `.md` and `.txt`, up to 2 MB each and five files per batch. Files go to Convex Storage, create a durable ingestion job, pass through Hermes structuring, and become workspace-scoped source passages. The local filesystem quarantine endpoint remains available as a fallback but is no longer used by the React product surface.
+
+This checkout uses Convex anonymous local mode because no Convex account is linked on the machine. To claim the partner deployment later, run `npx convex login`, select or create the project, then run `npx convex deploy` and configure the resulting `VITE_CONVEX_URL` in Cloudflare Pages.
 
 ## Verification
 

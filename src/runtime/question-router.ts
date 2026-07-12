@@ -20,7 +20,7 @@ export function routeQuestion(question: string): QuestionRoute {
   if (greetingPattern.test(normalized)) {
     return {
       kind: "conversation",
-      answer: "Hi! Ask me anything about the PostHog team handbook, policies, or operations.",
+      answer: "Hi! Ask me anything about this workspace’s documents, policies, or operations.",
     };
   }
 

@@ -22,3 +22,17 @@ test("a supported Hermes answer tolerates a string gap field and still validates
   assert.equal(result.decision.publishable, true);
   assert.equal(result.answer.gap, null);
 });
+
+test("a workspace answer validates against Convex runtime passages instead of the demo manifest", async () => {
+  const output = JSON.stringify({
+    status: "SUPPORTED",
+    answer: "Expenses need a receipt.",
+    claims: [{ text: "Expenses need a receipt.", citationIds: ["c1"] }],
+    citations: [{ id: "c1", sourcePath: "convex/doc-1/policy.md#passage-0", startLine: 12, endLine: 12, excerpt: "Expenses need a receipt." }],
+    gap: null,
+  });
+
+  const result = await validateHermesOutput(output, [{ path: "convex/doc-1/policy.md#passage-0", hash: "convex:doc-1", lines: ["Expenses need a receipt."], firstLineNumber: 12 }]);
+  assert.equal(result.decision.publishable, true);
+  assert.equal(result.citations[0]?.sourceId, "convex/doc-1/policy.md#passage-0");
+});
