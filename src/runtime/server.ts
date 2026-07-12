@@ -1,70 +1,74 @@
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
+import { streamSSE } from "hono/streaming";
 import { z } from "zod";
 
-import { validateHermesOutput } from "./answer-contract.js";
+import { answerQuestion } from "./chat-service.js";
 import { runHermes } from "./hermes-cli.js";
-import { agencyPrompt, answerPrompt } from "./prompts.js";
-import { routeQuestion } from "./question-router.js";
-import { classifyQuestionScope } from "./scope-classifier.js";
+import { ingestKnowledgeFiles, getKnowledgeSummary } from "./ingestion.js";
+import { agencyPrompt } from "./prompts.js";
 
 const app = new Hono();
+const uploadWindows = new Map<string, { count: number; resetAt: number }>();
 app.use("/api/*", cors({ origin: ["http://127.0.0.1:4173", "http://localhost:4173"] }));
+app.use("/api/knowledge/ingest", async (context, next) => {
+  const key = context.req.header("cf-connecting-ip") ?? "local-or-unknown";
+  const now = Date.now();
+  const window = uploadWindows.get(key);
+  const current = !window || window.resetAt <= now ? { count: 0, resetAt: now + 60_000 } : window;
+  if (current.count >= 10) return context.json({ error: "Upload rate limit reached. Try again in one minute." }, 429);
+  current.count += 1;
+  uploadWindows.set(key, current);
+  await next();
+});
+app.use("/api/knowledge/ingest", bodyLimit({
+  maxSize: 11 * 1024 * 1024,
+  onError: (context) => context.json({ error: "Upload request exceeds the 11 MB batch limit." }, 413),
+}));
 
 app.get("/health", (context) => context.json({ status: "ok", runtime: "hermes-llm-wiki" }));
 
 app.post("/api/chat", async (context) => {
   const request = z.object({ question: z.string().trim().min(1).max(2_000) }).parse(await context.req.json());
-  let route = routeQuestion(request.question);
-  let preflightDurationMs = 0;
-  if (route.kind === "classify") {
-    const classified = await classifyQuestionScope(request.question);
-    preflightDurationMs = classified.durationMs;
-    if (classified.route === "unavailable") {
-      return context.json({
-        answer: {
-          status: "SYSTEM_UNAVAILABLE",
-          answer: "Atlas could not determine whether this question belongs to the workspace.",
-          claims: [],
-          citations: [],
-          gap: null,
-        },
-        citations: [],
-        decision: { publishable: false, status: "SYSTEM_UNAVAILABLE", reason: "scope_classifier_unavailable" },
-        run: { durationMs: preflightDurationMs, runtime: "Hermes scope classifier", skipped: true, route: "unavailable" },
-      }, 503);
+  const result = await answerQuestion(request.question);
+  return context.json(result.body, result.statusCode as 200 | 503);
+});
+
+app.post("/api/chat/stream", async (context) => {
+  const request = z.object({ question: z.string().trim().min(1).max(2_000) }).parse(await context.req.json());
+  return streamSSE(context, async (stream) => {
+    const abortController = new AbortController();
+    stream.onAbort(() => abortController.abort());
+    let eventId = 0;
+    const send = async (event: string, data: unknown) => {
+      await stream.writeSSE({ event, id: String(++eventId), data: JSON.stringify(data) });
+    };
+    const result = await answerQuestion(request.question, async (event) => send(event.type, event), abortController.signal);
+    const body = result.body;
+    if (!body.run?.skipped) {
+      for (const citation of body.citations ?? []) await send("retrieval", citation);
+      await send("stage", { type: "stage", id: "render", state: "running", label: "Rendering validated response" });
     }
-    route = classified.route === "knowledge"
-      ? { kind: "knowledge" }
-      : {
-          kind: "out_of_scope",
-          answer: "I can only answer questions about this workspace's company handbook, policies, and operations.",
-        };
-  }
-  if (route.kind !== "knowledge") {
-    return context.json({
-      answer: {
-        status: route.kind === "conversation" ? "CONVERSATIONAL" : "OUT_OF_SCOPE",
-        answer: route.answer,
-        claims: [],
-        citations: [],
-        gap: null,
-      },
-      citations: [],
-      decision: { publishable: false, status: route.kind.toUpperCase(), reason: null },
-      run: { durationMs: preflightDurationMs, runtime: "Atlas preflight", skipped: true, route: route.kind },
-    });
-  }
+    const words = body.answer.answer.match(/\S+\s*/g) ?? [body.answer.answer];
+    for (const delta of words) {
+      await send("text-delta", { delta });
+      await stream.sleep(18);
+    }
+    if (!body.run?.skipped) await send("stage", { type: "stage", id: "render", state: "complete", label: "Validated response rendered" });
+    await send("validation", body.decision);
+    await send("done", { ...body, httpStatus: result.statusCode });
+  });
+});
+
+app.get("/api/knowledge", async (context) => context.json(await getKnowledgeSummary()));
+
+app.post("/api/knowledge/ingest", async (context) => {
   try {
-    const run = await runHermes(answerPrompt(request.question), ["llm-wiki"]);
-    const validated = await validateHermesOutput(run.output);
-    return context.json({ ...validated, run: { durationMs: run.durationMs, runtime: "Hermes + llm-wiki" } });
+    return context.json(await ingestKnowledgeFiles(await context.req.formData()), 201);
   } catch (error) {
-    return context.json({
-      answer: { status: "SYSTEM_UNAVAILABLE", answer: "Hermes could not complete a validated answer.", claims: [], citations: [], gap: null },
-      decision: { publishable: false, status: "SYSTEM_UNAVAILABLE", reason: error instanceof Error ? error.message : "unknown_error" },
-    }, 503);
+    return context.json({ error: error instanceof Error ? error.message : "Upload failed." }, 400);
   }
 });
 

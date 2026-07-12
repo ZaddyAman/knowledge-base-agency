@@ -15,7 +15,12 @@ const hermesAnswerSchema = z.object({
     endLine: z.number().int().positive(),
     excerpt: z.string(),
   })),
-  gap: z.object({ title: z.string(), missingEvidence: z.string() }).nullable().optional(),
+  gap: z.preprocess(
+    (value) => typeof value === "string"
+      ? { title: "Knowledge gap", missingEvidence: value }
+      : value,
+    z.object({ title: z.string(), missingEvidence: z.string() }).nullable().optional(),
+  ),
 });
 
 type Manifest = {
@@ -34,12 +39,15 @@ export async function validateHermesOutput(output: string) {
     "utf8",
   );
   const manifest = JSON.parse(manifestText.replace(/^\uFEFF/, "")) as Manifest;
-  const answer = hermesAnswerSchema.parse(parseJson(output));
+  const parsedAnswer = hermesAnswerSchema.parse(parseJson(output));
+  const answer = parsedAnswer.status === "SUPPORTED"
+    ? { ...parsedAnswer, gap: null }
+    : parsedAnswer;
   const sourceByPath = new Map(manifest.sources.map((source) => [source.path, source]));
 
   const citations: AnswerInput["citations"] = answer.citations.map((citation) => {
     const normalizedPath = citation.sourcePath
-      .replace(/^qmd:\/\/posthog-demo\//, "")
+      .replace(/^qmd:\/\/posthog-demo\/(?:path\/)?/, "")
       .replace(/^posthog-demo\//, "");
     const source = sourceByPath.get(normalizedPath);
     if (!source) throw new Error(`Unknown citation source: ${citation.sourcePath}`);

@@ -12,7 +12,7 @@ export function parseScopeClassification(output: string): ScopeClassification["r
   return "unavailable";
 }
 
-export async function classifyQuestionScope(question: string): Promise<ScopeClassification> {
+export async function classifyQuestionScope(question: string, signal?: AbortSignal): Promise<ScopeClassification> {
   const startedAt = Date.now();
   const prompt = `Classify whether this question is about an organization's internal handbook, policies, benefits, operations, security, spending, onboarding, time off, meetings, or customer support.
 Do not answer the question. Do not use tools. General knowledge, entertainment, politics, shopping, personal advice, and unrelated requests are out of scope.
@@ -21,7 +21,7 @@ Reply with exactly IN_SCOPE or OUT_OF_SCOPE.
 Question: ${JSON.stringify(question)}`;
 
   try {
-    const run = await runHermes(prompt, [], 60_000, ["clarify"]);
+    const run = await runHermes(prompt, [], 60_000, ["clarify"], signal);
     return {
       route: parseScopeClassification(run.output),
       durationMs: run.durationMs,

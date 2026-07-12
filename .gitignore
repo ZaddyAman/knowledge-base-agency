@@ -10,3 +10,5 @@ coverage/
 *.log
 .DS_Store
 Thumbs.db
+data/posthog-demo/pending/
+data/posthog-demo/pending-uploads.json

@@ -14,7 +14,7 @@ Return ONLY valid JSON, without markdown fences, using this shape:
   "status": "SUPPORTED|PARTIALLY_SUPPORTED|REFUSED_GAP|REFUSED_CONFLICT",
   "answer": "user-facing answer",
   "claims": [{"text":"one factual claim","citationIds":["c1"]}],
-  "citations": [{"id":"c1","sourcePath":"qmd://posthog-demo/path/file.md","startLine":1,"endLine":2,"excerpt":"exact contiguous source text"}],
+  "citations": [{"id":"c1","sourcePath":"company/security.md","startLine":1,"endLine":2,"excerpt":"exact contiguous source text"}],
   "gap": null
 }
 For a refusal, claims and citations must be empty and gap must describe the missing evidence.`;

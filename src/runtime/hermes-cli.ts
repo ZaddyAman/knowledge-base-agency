@@ -10,6 +10,7 @@ export async function runHermes(
   skills: string[],
   timeoutMs = 180_000,
   toolsets?: string[],
+  signal?: AbortSignal,
 ): Promise<HermesRun> {
   const startedAt = Date.now();
   const args = ["/root/.local/bin/hermes", "-z", prompt];
@@ -25,6 +26,11 @@ export async function runHermes(
 
     let stdout = "";
     let stderr = "";
+    const abort = () => {
+      child.kill();
+      reject(new Error("Hermes run aborted"));
+    };
+    signal?.addEventListener("abort", abort, { once: true });
     child.stdout.setEncoding("utf8");
     child.stderr.setEncoding("utf8");
     child.stdout.on("data", (chunk: string) => (stdout += chunk));
@@ -37,11 +43,13 @@ export async function runHermes(
 
     child.on("error", (error) => {
       clearTimeout(timeout);
+      signal?.removeEventListener("abort", abort);
       reject(error);
     });
 
     child.on("close", (code) => {
       clearTimeout(timeout);
+      signal?.removeEventListener("abort", abort);
       if (code !== 0) {
         reject(new Error(stderr.trim() || `Hermes exited with code ${code}`));
         return;
