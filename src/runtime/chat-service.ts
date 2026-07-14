@@ -73,7 +73,7 @@ export async function answerQuestion(question: string, report: StageReporter = (
     await report({ type: "stage", id: "search", state: "complete", label: "Source passages resolved" });
     await report({ type: "stage", id: "validate", state: "running", label: "Validating exact citations" });
     const validated = await validateHermesOutput(run.output, runtimeSources);
-    await report({ type: "stage", id: "validate", state: "complete", label: validated.decision.publishable ? "Every claim is supported" : "Answer converted to a safe refusal" });
+    await report({ type: "stage", id: "validate", state: "complete", label: validated.answer.status === "REFUSED_GAP" || validated.answer.status === "REFUSED_CONFLICT" ? "Unsafe answer blocked; knowledge gap recorded" : "Every claim is supported" });
     return { statusCode: 200, body: { ...validated, run: { durationMs: run.durationMs, runtime: "Hermes + llm-wiki", skipped: false } } };
   } catch (error) {
     console.error("Hermes answer run failed", error);

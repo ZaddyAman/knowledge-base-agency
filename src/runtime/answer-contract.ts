@@ -75,5 +75,22 @@ export async function validateHermesOutput(output: string, runtimeSources: Runti
     gap: answer.gap ?? null,
   };
   const decision = validateAnswer(normalized, sources);
+  if (!decision.publishable) {
+    const safeAnswer = {
+      status: "REFUSED_GAP" as const,
+      answer: "I can’t publish a factual answer because the retrieved citation failed validation. I’ve recorded this as a knowledge gap.",
+      claims: [],
+      citations: [],
+      gap: {
+        title: "Citation validation failed",
+        missingEvidence: `A source passage that passes deterministic validation is required (${decision.reason ?? "unknown_validation_failure"}).`,
+      },
+    };
+    return {
+      answer: safeAnswer,
+      citations: [],
+      decision: { publishable: false, status: "REFUSED_GAP" as const, reason: decision.reason },
+    };
+  }
   return { answer, citations, decision };
 }

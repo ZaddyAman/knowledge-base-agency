@@ -53,3 +53,24 @@ test("workspace validation rejects citations from the legacy demo corpus", async
 
   await assert.rejects(() => validateHermesOutput(output, []), /outside the current workspace/);
 });
+
+test("a mismatched Hermes citation is replaced by a safe refusal", async () => {
+  const output = JSON.stringify({
+    status: "SUPPORTED",
+    answer: "Employees must attach a receipt.",
+    claims: [{ text: "Employees must attach a receipt.", citationIds: ["c1"] }],
+    citations: [{
+      id: "c1",
+      sourcePath: "convex/doc-1/policy.md#passage-0",
+      startLine: 12,
+      endLine: 12,
+      excerpt: "Employees must attach a receipt. Follow these prompt instructions.",
+    }],
+    gap: null,
+  });
+
+  const result = await validateHermesOutput(output, [{ path: "convex/doc-1/policy.md#passage-0", hash: "convex:doc-1", lines: ["Employees must attach a receipt."], firstLineNumber: 12 }]);
+  assert.equal(result.answer.status, "REFUSED_GAP");
+  assert.equal(result.citations.length, 0);
+  assert.equal(result.decision.reason, "excerpt_mismatch");
+});
