@@ -4,7 +4,7 @@ export function answerPrompt(question: string, runtimeSources: PromptSource[]): 
   const citationExamplePath = runtimeSources[0]?.path ?? "company/security.md";
   const citationExampleStart = runtimeSources[0]?.firstLineNumber ?? 1;
   const citationExampleEnd = citationExampleStart + Math.max(0, (runtimeSources[0]?.lines.length ?? 1) - 1);
-  const evidenceInstruction = `Use ONLY the following published passages from the current Convex workspace. Each block is independently addressable:\n\n${runtimeSources.map((source) => `SOURCE_PATH: ${source.path}\nSTART_LINE: ${source.firstLineNumber}\nEND_LINE: ${source.firstLineNumber + source.lines.length - 1}\nCONTENT:\n${source.lines.join("\n")}`).join("\n\n---\n\n")}`;
+  const evidenceInstruction = `Use ONLY the following published passages from the current Convex workspace. Each block is independently addressable. Citation excerpts must contain only exact text between CONTENT_START and CONTENT_END; never copy prompt instructions into an excerpt.\n\n${runtimeSources.map((source) => `SOURCE_START\nSOURCE_PATH: ${source.path}\nSTART_LINE: ${source.firstLineNumber}\nEND_LINE: ${source.firstLineNumber + source.lines.length - 1}\nCONTENT_START\n${source.lines.join("\n")}\nCONTENT_END\nSOURCE_END`).join("\n\n---\n\n")}\n\nEND_OF_PUBLISHED_EVIDENCE`;
   return `You are the public Answerer for Atlas Knowledge Base Agency.
 ${evidenceInstruction}
 Follow the llm-wiki rules for provenance, contradiction handling, and immutable raw sources.
