@@ -19,10 +19,16 @@ async function ownedJob(ctx: MutationCtx, jobId: Id<"ingestionJobs">, viewerId: 
   return job;
 }
 
+function assertWorker(workerToken: string) {
+  if (!process.env.INGESTION_WORKER_TOKEN || workerToken !== process.env.INGESTION_WORKER_TOKEN) throw new Error("Worker authorization failed");
+}
+
 export const start = mutation({
-  args: { viewerId: v.string(), jobId: v.id("ingestionJobs") },
+  args: { viewerId: v.string(), jobId: v.id("ingestionJobs"), workerToken: v.string() },
   handler: async (ctx, args) => {
+    assertWorker(args.workerToken);
     const job = await ownedJob(ctx, args.jobId, args.viewerId);
+    if (job.state !== "queued") return null;
     const document = await ctx.db.get(job.documentId);
     if (!document) throw new Error("Document not found");
     const storageUrl = await ctx.storage.getUrl(document.storageId);
@@ -35,22 +41,24 @@ export const start = mutation({
 });
 
 export const progress = mutation({
-  args: { viewerId: v.string(), jobId: v.id("ingestionJobs"), stage: v.string(), progress: v.number() },
-  handler: async (ctx, args) => { const job = await ownedJob(ctx, args.jobId, args.viewerId); await ctx.db.patch(job._id, { stage: args.stage, progress: Math.max(0, Math.min(100, args.progress)), updatedAt: Date.now() }); },
+  args: { viewerId: v.string(), jobId: v.id("ingestionJobs"), workerToken: v.string(), stage: v.string(), progress: v.number() },
+  handler: async (ctx, args) => { assertWorker(args.workerToken); const job = await ownedJob(ctx, args.jobId, args.viewerId); if (job.state !== "running") throw new Error("Ingestion job is not running"); await ctx.db.patch(job._id, { stage: args.stage, progress: Math.max(0, Math.min(100, args.progress)), updatedAt: Date.now() }); },
 });
 
 export const complete = mutation({
-  args: { viewerId: v.string(), jobId: v.id("ingestionJobs"), warningCode: v.optional(v.string()), passages: v.array(v.object({ text: v.string(), startLine: v.number(), endLine: v.number() })) },
+  args: { viewerId: v.string(), jobId: v.id("ingestionJobs"), workerToken: v.string(), warningCode: v.optional(v.string()), structureReceipt: v.optional(v.string()), passages: v.array(v.object({ text: v.string(), startLine: v.number(), endLine: v.number() })) },
   handler: async (ctx, args) => {
+    assertWorker(args.workerToken);
     const job = await ownedJob(ctx, args.jobId, args.viewerId);
+    if (job.state !== "running") throw new Error("Ingestion job is not running");
     const existing = await ctx.db.query("sourcePassages").withIndex("by_document_ordinal", (q) => q.eq("documentId", job.documentId)).collect();
     for (const passage of existing) await ctx.db.delete(passage._id);
     const now = Date.now();
-    for (const [ordinal, passage] of args.passages.slice(0, 100).entries()) await ctx.db.insert("sourcePassages", { workspaceId: job.workspaceId, documentId: job.documentId, ordinal, text: passage.text.slice(0, 4000), startLine: passage.startLine, endLine: passage.endLine, createdAt: now });
-    await ctx.db.patch(job.documentId, { status: "ready", updatedAt: now });
+    for (const [ordinal, passage] of args.passages.slice(0, 100).entries()) await ctx.db.insert("sourcePassages", { workspaceId: job.workspaceId, documentId: job.documentId, ordinal, text: passage.text.slice(0, 4000), startLine: passage.startLine, endLine: passage.endLine, published: false, createdAt: now });
+    await ctx.db.patch(job.documentId, { status: "review", structureReceipt: args.structureReceipt?.slice(0, 8_000), updatedAt: now });
     await ctx.db.patch(job._id, {
       state: "complete",
-      stage: args.warningCode ? "Ready · Hermes receipt unavailable" : "Ready for retrieval",
+      stage: args.warningCode ? "Owner review · Hermes receipt unavailable" : "Awaiting owner publication",
       progress: 100,
       errorCode: undefined,
       warningCode: args.warningCode,
@@ -60,6 +68,17 @@ export const complete = mutation({
 });
 
 export const fail = mutation({
-  args: { viewerId: v.string(), jobId: v.id("ingestionJobs"), errorCode: v.string() },
-  handler: async (ctx, args) => { const job = await ownedJob(ctx, args.jobId, args.viewerId); const now = Date.now(); await ctx.db.patch(job.documentId, { status: "failed", updatedAt: now }); await ctx.db.patch(job._id, { state: "failed", stage: "Ingestion failed", errorCode: args.errorCode, updatedAt: now }); },
+  args: { viewerId: v.string(), jobId: v.id("ingestionJobs"), workerToken: v.string(), errorCode: v.string() },
+  handler: async (ctx, args) => { assertWorker(args.workerToken); const job = await ownedJob(ctx, args.jobId, args.viewerId); const now = Date.now(); await ctx.db.patch(job.documentId, { status: "failed", updatedAt: now }); await ctx.db.patch(job._id, { state: "failed", stage: "Ingestion failed", errorCode: args.errorCode, updatedAt: now }); },
+});
+
+export const retry = mutation({
+  args: { viewerId: v.string(), jobId: v.id("ingestionJobs") },
+  handler: async (ctx, args) => {
+    const job = await ownedJob(ctx, args.jobId, args.viewerId);
+    if (job.state !== "failed") return;
+    const now = Date.now();
+    await ctx.db.patch(job.documentId, { status: "queued", updatedAt: now });
+    await ctx.db.patch(job._id, { state: "queued", stage: "Awaiting Hermes", progress: 0, errorCode: undefined, warningCode: undefined, updatedAt: now });
+  },
 });

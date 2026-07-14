@@ -1,5 +1,3 @@
-import { readFile } from "node:fs/promises";
-import path from "node:path";
 import { z } from "zod";
 
 import { validateAnswer, type AnswerInput, type SourceVersion } from "../domain/answer-validator.js";
@@ -23,10 +21,6 @@ const hermesAnswerSchema = z.object({
   ),
 });
 
-type Manifest = {
-  sources: Array<{ path: string; sha256: string; sourceUrl: string }>;
-};
-
 export type RuntimeSource = {
   path: string;
   hash: string;
@@ -39,24 +33,15 @@ function parseJson(output: string): unknown {
   return JSON.parse((fenced?.[1] ?? output).trim());
 }
 
-export async function validateHermesOutput(output: string, runtimeSources: RuntimeSource[] = []) {
-  const root = process.cwd();
-  const manifestText = await readFile(
-    path.join(root, "data/posthog-demo/manifest.json"),
-    "utf8",
-  );
-  const manifest = JSON.parse(manifestText.replace(/^\uFEFF/, "")) as Manifest;
+export async function validateHermesOutput(output: string, runtimeSources: RuntimeSource[]) {
   const parsedAnswer = hermesAnswerSchema.parse(parseJson(output));
   const answer = parsedAnswer.status === "SUPPORTED"
     ? { ...parsedAnswer, gap: null }
     : parsedAnswer;
-  const sourceByPath = new Map(manifest.sources.map((source) => [source.path, source]));
   const runtimeSourceByPath = new Map(runtimeSources.map((source) => [source.path, source]));
 
   const citations: AnswerInput["citations"] = answer.citations.map((citation) => {
-    const normalizedPath = citation.sourcePath
-      .replace(/^qmd:\/\/posthog-demo\/(?:path\/)?/, "")
-      .replace(/^posthog-demo\//, "");
+    const normalizedPath = citation.sourcePath;
     const runtimeSource = runtimeSourceByPath.get(normalizedPath);
     if (runtimeSource) return {
       id: citation.id,
@@ -66,16 +51,7 @@ export async function validateHermesOutput(output: string, runtimeSources: Runti
       endLine: citation.endLine,
       excerpt: citation.excerpt,
     };
-    const source = sourceByPath.get(normalizedPath);
-    if (!source) throw new Error(`Unknown citation source: ${citation.sourcePath}`);
-    return {
-      id: citation.id,
-      sourceId: normalizedPath,
-      sourceHash: `sha256:${source.sha256}`,
-      startLine: citation.startLine,
-      endLine: citation.endLine,
-      excerpt: citation.excerpt,
-    };
+    throw new Error(`Citation is outside the current workspace: ${citation.sourcePath}`);
   });
 
   const citedPaths = [...new Set(citations.map((citation) => citation.sourceId))];
@@ -88,16 +64,7 @@ export async function validateHermesOutput(output: string, runtimeSources: Runti
       lines: runtimeSource.lines,
       firstLineNumber: runtimeSource.firstLineNumber,
     };
-    const source = sourceByPath.get(sourcePath);
-    if (!source) throw new Error(`Unknown source: ${sourcePath}`);
-    const body = await readFile(path.join(root, "data/posthog-demo/sources", sourcePath), "utf8");
-    return {
-      id: sourcePath,
-      hash: `sha256:${source.sha256}`,
-      active: true,
-      lines: body.replace(/\r\n/g, "\n").split("\n"),
-      firstLineNumber: 1,
-    };
+    throw new Error(`Source is outside the current workspace: ${sourcePath}`);
   }));
 
   const normalized: AnswerInput = {

@@ -1,12 +1,10 @@
 type PromptSource = { path: string; lines: string[]; firstLineNumber: number };
 
-export function answerPrompt(question: string, runtimeSources: PromptSource[] = []): string {
+export function answerPrompt(question: string, runtimeSources: PromptSource[]): string {
   const citationExamplePath = runtimeSources[0]?.path ?? "company/security.md";
   const citationExampleStart = runtimeSources[0]?.firstLineNumber ?? 1;
   const citationExampleEnd = citationExampleStart + Math.max(0, (runtimeSources[0]?.lines.length ?? 1) - 1);
-  const evidenceInstruction = runtimeSources.length > 0
-    ? `Use ONLY the following active passages from the current Convex workspace. Each block is an independently addressable source passage:\n\n${runtimeSources.map((source) => `SOURCE_PATH: ${source.path}\nSTART_LINE: ${source.firstLineNumber}\nEND_LINE: ${source.firstLineNumber + source.lines.length - 1}\nCONTENT:\n${source.lines.join("\n")}`).join("\n\n---\n\n")}`
-    : `Use your built-in file search and read tools to search ONLY this immutable legacy demo corpus:\n/mnt/c/Users/amans/Documents/Hackethon/data/posthog-demo/sources`;
+  const evidenceInstruction = `Use ONLY the following published passages from the current Convex workspace. Each block is independently addressable:\n\n${runtimeSources.map((source) => `SOURCE_PATH: ${source.path}\nSTART_LINE: ${source.firstLineNumber}\nEND_LINE: ${source.firstLineNumber + source.lines.length - 1}\nCONTENT:\n${source.lines.join("\n")}`).join("\n\n---\n\n")}`;
   return `You are the public Answerer for Atlas Knowledge Base Agency.
 ${evidenceInstruction}
 Follow the llm-wiki rules for provenance, contradiction handling, and immutable raw sources.
@@ -27,10 +25,10 @@ Return ONLY valid JSON, without markdown fences, using this shape:
 For a refusal, claims and citations must be empty and gap must describe the missing evidence.`;
 }
 
-export function agencyPrompt(operation: string): string {
+export function agencyPrompt(operation: string, runtimeSources: PromptSource[]): string {
   return `You are the Hermes KB Director for Atlas.
-Use the llm-wiki operating rules and built-in file search/read tools over:
-/mnt/c/Users/amans/Documents/Hackethon/data/posthog-demo/sources
+Use the llm-wiki operating rules over ONLY these published passages from the current Convex workspace:
+${runtimeSources.map((source) => `SOURCE_PATH: ${source.path}\nSTART_LINE: ${source.firstLineNumber}\nCONTENT:\n${source.lines.join("\n")}`).join("\n\n---\n\n") || "NO PUBLISHED EVIDENCE"}
 For this agency run, use delegate_task to assign bounded work to these specialists:
 1. Structurer: inspect the corpus taxonomy and provenance.
 2. Gap Detector: identify unsupported organizational questions without inventing policy.

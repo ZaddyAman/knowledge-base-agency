@@ -31,7 +31,7 @@ function directResult(kind: "conversation" | "out_of_scope", answer: string, dur
   };
 }
 
-export async function answerQuestion(question: string, report: StageReporter = () => undefined, signal?: AbortSignal, runtimeSources?: RuntimeSource[]) {
+export async function answerQuestion(question: string, report: StageReporter = () => undefined, signal?: AbortSignal, runtimeSources: RuntimeSource[] = []) {
   let route = routeQuestion(question);
   let preflightDurationMs = 0;
 
@@ -62,7 +62,7 @@ export async function answerQuestion(question: string, report: StageReporter = (
     return directResult(route.kind, route.answer, preflightDurationMs);
   }
 
-  if (runtimeSources && runtimeSources.length === 0) {
+  if (runtimeSources.length === 0) {
     const gap = { title: "Workspace has no supporting evidence", missingEvidence: "Upload and ingest a source document that addresses this question." };
     return { statusCode: 200, body: { answer: { status: "REFUSED_GAP", answer: "I can’t answer this from the current workspace because it has no ready supporting evidence.", claims: [], citations: [], gap }, citations: [], decision: { publishable: true, status: "REFUSED_GAP", reason: null }, run: { durationMs: 0, runtime: "Atlas evidence gate", skipped: true } } };
   }

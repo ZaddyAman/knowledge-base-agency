@@ -10,7 +10,7 @@ test("a supported Hermes answer tolerates a string gap field and still validates
     claims: [{ text: "Take a screenshot and post it in #phishing-attempts.", citationIds: ["c1"] }],
     citations: [{
       id: "c1",
-      sourcePath: "qmd://posthog-demo/path/company/security.md",
+      sourcePath: "convex/doc-security/security.md#passage-0",
       startLine: 103,
       endLine: 105,
       excerpt: "Take a screenshot and post it in `#phishing-attempts`.",
@@ -18,7 +18,12 @@ test("a supported Hermes answer tolerates a string gap field and still validates
     gap: "Not applicable because the answer is supported.",
   });
 
-  const result = await validateHermesOutput(output);
+  const result = await validateHermesOutput(output, [{
+    path: "convex/doc-security/security.md#passage-0",
+    hash: "convex:doc-security",
+    lines: ["Take a screenshot and post it in `#phishing-attempts`.", "", ""],
+    firstLineNumber: 103,
+  }]);
   assert.equal(result.decision.publishable, true);
   assert.equal(result.answer.gap, null);
 });
@@ -35,4 +40,16 @@ test("a workspace answer validates against Convex runtime passages instead of th
   const result = await validateHermesOutput(output, [{ path: "convex/doc-1/policy.md#passage-0", hash: "convex:doc-1", lines: ["Expenses need a receipt."], firstLineNumber: 12 }]);
   assert.equal(result.decision.publishable, true);
   assert.equal(result.citations[0]?.sourceId, "convex/doc-1/policy.md#passage-0");
+});
+
+test("workspace validation rejects citations from the legacy demo corpus", async () => {
+  const output = JSON.stringify({
+    status: "SUPPORTED",
+    answer: "Take a screenshot and report it.",
+    claims: [{ text: "Take a screenshot and report it.", citationIds: ["c1"] }],
+    citations: [{ id: "c1", sourcePath: "company/security.md", startLine: 103, endLine: 105, excerpt: "Take a screenshot and post it in `#phishing-attempts`." }],
+    gap: null,
+  });
+
+  await assert.rejects(() => validateHermesOutput(output, []), /outside the current workspace/);
 });

@@ -41,7 +41,9 @@ export default defineSchema({
     originalName: v.string(),
     contentType: v.string(),
     size: v.number(),
-    status: v.union(v.literal("queued"), v.literal("ingesting"), v.literal("ready"), v.literal("failed")),
+    status: v.union(v.literal("queued"), v.literal("ingesting"), v.literal("review"), v.literal("published"), v.literal("ready"), v.literal("failed")),
+    structureReceipt: v.optional(v.string()),
+    publishedAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_workspace_updated", ["workspaceId", "updatedAt"]),
@@ -68,10 +70,12 @@ export default defineSchema({
     text: v.string(),
     startLine: v.number(),
     endLine: v.number(),
+    published: v.optional(v.boolean()),
     createdAt: v.number(),
   })
     .index("by_workspace_created", ["workspaceId", "createdAt"])
-    .index("by_document_ordinal", ["documentId", "ordinal"]),
+    .index("by_document_ordinal", ["documentId", "ordinal"])
+    .searchIndex("search_text", { searchField: "text", filterFields: ["workspaceId", "published"] }),
 
   runEvents: defineTable({
     workspaceId: v.id("workspaces"),
