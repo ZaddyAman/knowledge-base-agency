@@ -55,6 +55,7 @@ type FinalResult = {
   run?: { durationMs: number; runtime: string; skipped?: boolean };
 };
 type UploadItem = { id: string; file: File; progress: number; state: "selected" | "uploading" | "processing" | "pending" | "ready" | "error"; valid: boolean; error?: string; passages?: number };
+const API_BASE = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
 
 function getViewerId() {
   const existing = localStorage.getItem("atlas.viewerId");
@@ -217,7 +218,7 @@ function ChatWorkspace({ onKnowledge, viewerId, workspace, conversationId, onCon
         onConversationSelected(targetConversationId);
       }
       await appendMessage({ viewerId, conversationId: targetConversationId, role: "user", content: trimmed, status: "complete" });
-      const response = await fetch("/api/chat/stream", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ question: trimmed, viewerId, workspaceId: workspace._id }), signal: abortController.signal });
+      const response = await fetch(`${API_BASE}/api/chat/stream`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ question: trimmed, viewerId, workspaceId: workspace._id }), signal: abortController.signal });
       if (!response.body) throw new Error("Streaming is unavailable in this browser.");
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -309,7 +310,7 @@ function KnowledgeWorkspace({ onAsk, viewerId, workspace, navigation }: { onAsk:
   async function startIngestion(jobId: Id<"ingestionJobs">, retry = false) {
     setIngestionError("");
     if (retry) await retryIngestion({ viewerId, jobId });
-    const response = await fetch("/api/ingestion/start", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ viewerId, jobId }) });
+    const response = await fetch(`${API_BASE}/api/ingestion/start`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ viewerId, jobId }) });
     if (!response.ok) throw new Error("Hermes ingestion could not be started");
   }
 

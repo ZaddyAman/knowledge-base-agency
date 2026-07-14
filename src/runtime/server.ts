@@ -11,7 +11,7 @@ import { answerQuestion } from "./chat-service.js";
 import { runHermes } from "./hermes-cli.js";
 import { agencyPrompt } from "./prompts.js";
 
-process.loadEnvFile?.(".env.local");
+process.loadEnvFile?.(process.env.ENV_FILE ?? ".env.local");
 const convexUrl = process.env.CONVEX_URL ?? process.env.VITE_CONVEX_URL;
 const convex = convexUrl ? new ConvexHttpClient(convexUrl) : null;
 const ingestionWorkerToken = process.env.INGESTION_WORKER_TOKEN;
@@ -75,7 +75,13 @@ async function processIngestion(viewerId: string, jobId: Id<"ingestionJobs">) {
 
 const app = new Hono();
 const uploadWindows = new Map<string, { count: number; resetAt: number }>();
-app.use("/api/*", cors({ origin: ["http://127.0.0.1:4173", "http://localhost:4173"] }));
+app.use("/api/*", cors({
+  origin: (origin) => {
+    if (origin === "http://127.0.0.1:4173" || origin === "http://localhost:4173") return origin;
+    if (origin.endsWith(".pages.dev")) return origin;
+    return process.env.PUBLIC_APP_ORIGIN === origin ? origin : "";
+  },
+}));
 
 app.get("/health", (context) => context.json({ status: "ok", runtime: "hermes-llm-wiki" }));
 
